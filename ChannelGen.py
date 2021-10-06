@@ -21,3 +21,4 @@ print(sinc_sig)
 plt.plot(x+5,sinc_sig) #Restar a x en el plot "desplaza" la señal sinc
 plt.show()
 #Test2
+#Test VS

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.core.fromnumeric import prod
+from numpy.core.fromnumeric import prod, size
 from numpy.core.function_base import linspace
 
 """ #Espacio lineal equi-espaciado
@@ -19,11 +19,11 @@ print(sinc_sig)
 plt.show() """
 
 ######################
-Fs = 30e6 
+Fs = 20e6 
 Ts = 1/Fs
 
 #Cost 207 Model (Tux)
-delay = np.array([0,0.217,0.512,0.514,0.517,0.674,0.0882,1.230,1.287,1.311,1.349,1.533,1.535,1.1622,1.818,1.836,1.884,1.943,2.048,2.140])*1e-6
+delay = np.array([0,0.217,0.512,0.514,0.517,0.674,0.882,1.230,1.287,1.311,1.349,1.533,1.535,1.1622,1.818,1.836,1.884,1.943,2.048,2.140])*1e-6
 pw_db = np.array([-5.7,-7.6,-10.1,-10.2,-10.2,-11.5,-13.4,-16.3,-16.9,-17.1,-17.4,-19,-19,-19.8,-21.5,-21.6,-22.1,-22.6,-23.5,-24.3])
 pw_lineal = 10**(pw_db/10)
 
@@ -39,15 +39,19 @@ L=TauMax*Fs
 #Generar Matriz RNG de Paths
 #Distribución Normal con Media 0 y Varianza (Potencia) Unitaria
 mu = 0 #Media 
-var = potencia = 1 #Potencia 
+var = potencia = 0.5 #Potencia 
 sigma = np.square(var) #Desviación Std
-x_normal = np.random.normal(mu,sigma,M) #Digamos que esta es la ponderación de las sincs que vas a generar
+x_q = np.random.normal(mu,sigma,M) #Digamos que esta es la ponderación de las sincs que vas a generar
+x_i = np.random.normal(mu,sigma,M)*1j
+x_normal = x_q + x_i
+
 #print(x_normal)
 
 #Generar Sincs
 L = int(np.ceil(L))
 L = L-1
-space = linspace(-L/2,L/2,L)
+space = linspace(0,L-1,L) #Linspace usando L es eje en muestras, necesita estar en tiempo
+t = space*Ts
 #print(space)
 #sinc_test = np.sinc(space-0.5) #Al sumar o restar el argumento de la sinc es como obligas los cruces por 0
 
@@ -57,14 +61,21 @@ sinc_2 = pw_lineal[2]*np.sinc(space-delay[2]) """
 
 ML_Matrix = np.array(np.zeros(shape=(L,M)))
 for i in range(M):
-    ML_Matrix[:,i] = pw_lineal[i]*np.sinc(space-(delay[i]))
-    plt.plot(space,ML_Matrix[:,i])
+    ML_Matrix[:,i] = np.sqrt(pw_lineal[i])*np.sinc((t-(delay[i]))*Fs)
+    #plt.plot(t,ML_Matrix[:,i])
 #print((ML_Matrix))
 
-producto = np.dot(ML_Matrix,x_normal)
+producto = ML_Matrix@x_normal
 print(np.size(producto))
 print(L)
-print(producto)
+print(x_normal)
+#print(producto)
+
+plt.plot(t,(producto))
+
+""" t = linspace(-5,5,1000)
+sink = np.sinc(t*Fs) #Ponderar cruces por 0
+plt.plot(t,sink) """
 
 #plt.plot(space,ML_Matrix[:,2],'r--',space,ML_Matrix[:,3],'b--')
 plt.show()

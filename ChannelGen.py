@@ -43,7 +43,7 @@ var = potencia = 0.5 #Potencia
 sigma = np.square(var) #Desviación Std
 x_q = np.random.normal(mu,sigma,M) #Digamos que esta es la ponderación de las sincs que vas a generar
 x_i = np.random.normal(mu,sigma,M)*1j
-x_normal = x_q + x_i
+x_normal = x_q + x_i  #Se podría decir que estos son los factores de atenuación? (1.3.1 Matz)
 
 #print(x_normal)
 
@@ -51,9 +51,9 @@ x_normal = x_q + x_i
 L = int(np.ceil(L))
 L = L-1
 space = linspace(0,L-1,L) #Linspace usando L es eje en muestras, necesita estar en tiempo
-t = space*Ts
+t = space*Ts #Eje de Tiempo
 #print(space)
-#sinc_test = np.sinc(space-0.5) #Al sumar o restar el argumento de la sinc es como obligas los cruces por 0
+#sinc_test = np.sinc(space-0.5) 
 
 #Necesitamos hacer "M" sincs retrasadas según la variable de delay, en este caso son 20 sincs
 """ sinc_1 = pw_lineal[1]*np.sinc(space-delay[1])
@@ -61,7 +61,7 @@ sinc_2 = pw_lineal[2]*np.sinc(space-delay[2]) """
 
 ML_Matrix = np.array(np.zeros(shape=(L,M)))
 for i in range(M):
-    ML_Matrix[:,i] = np.sqrt(pw_lineal[i])*np.sinc((t-(delay[i]))*Fs)
+    ML_Matrix[:,i] = np.sqrt(pw_lineal[i])*np.sinc((t-(delay[i]))*Fs) #Restar a 't' en la sinc es desplazar, multiplicar por Fs es ponderar
     #plt.plot(t,ML_Matrix[:,i])
 #print((ML_Matrix))
 

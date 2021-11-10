@@ -3,6 +3,8 @@ import numpy as np
 from numpy.core.fromnumeric import prod, size
 from numpy.core.function_base import linspace
 import cmath
+import sys
+np.set_printoptions(threshold=sys.maxsize)
 
 from numpy.random.mtrand import f
 
@@ -53,9 +55,35 @@ print(type(Sc_LambdaT[10000]))
 
 print(Sc_LambdaT[1])
 print(size(Sc_LambdaT))
-plt.plot(f_lin,(Sc_LambdaT))
+#plt.plot(f_lin,(Sc_LambdaT)) #Todo bien, EN ALGUN PUNTO HAY VALORES IMAG
+#plt.show()
 
+Hf = np.sqrt(Sc_LambdaT)
 
+#plt.plot(f_lin,(Hf)) #Todo bien
+#plt.show()
+
+Hf_FL = np.fft.fftshift(np.fft.ifft(np.fft.ifftshift(Hf)))
+
+#plt.plot(f_lin,(Hf_FL)) #Todo bien
+#plt.show()
+
+window = np.hamming(N)
+window = np.pad(window, (9000,9000), 'constant', constant_values=(0,0))
+
+hfw = Hf_FL*window
+
+#plt.plot(f_lin,(hfw)) #XD
+#plt.show()
+
+hfw = hfw[hfw != 0]
+
+print(np.real(hfw))
+
+hfw = hfw / np.linalg.norm(hfw)
+
+plt.plot((hfw)) #XD sigue habiendo valores imag
+plt.show()
 
 # x_normal = x_q + x_i  #Se podría decir que estos son los factores de atenuación? (1.3.1 Matz)
 

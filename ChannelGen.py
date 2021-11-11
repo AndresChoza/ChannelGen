@@ -7,6 +7,7 @@ import sys
 np.set_printoptions(threshold=sys.maxsize)
 
 from numpy.random.mtrand import f
+from scipy import signal
 
 ######################
 Fs = 20e6 
@@ -21,15 +22,24 @@ TauMax = delay[-1] #Retardo Máximo
 #print(TauMax)
 
 M=np.size(delay)
+N=20
 L=TauMax*Fs
 
 #Generar Matriz RNG de Paths
 #Distribución Normal con Media 0 y Varianza (Potencia) Unitaria
-mu = 0 #Media 
-var = potencia = 0.5 #Potencia 
+mu = 5 #Media 
+var = potencia = 1 #Potencia 
 sigma = np.square(var) #Desviación Std
-x_q = np.random.normal(mu,sigma,M) #Digamos que esta es la ponderación de las sincs que vas a generar
-x_i = np.random.normal(mu,sigma,M)*1j
+#Estos dos representan un solo path, necesitamos M de estos, no estos de M tamaño
+
+x_q = np.zeros((M,N))
+x_i = np.zeros((M,N))
+
+for j in range(M):
+    x_q[j,:] = np.random.normal(mu,sigma,N) #Digamos que esta es la ponderación de las sincs que vas a generar
+    x_i[j,:] = np.random.normal(mu,sigma,N)*1j
+
+print(x_i)
 
 ##############################JAKES###########################
 #Introducimos el filtro FIR de distribución Jakes a cada uno de los coeficientes de x_q y x_i 
@@ -41,7 +51,7 @@ Fmax = 1500
 #test = np.sqrt(1-((f_lin/Fmax)**2)) 
 #print(test)
 Sc_LambdaT = (1/((np.pi)*Fmax*(np.sqrt(1-((np.complex64(f_lin)/Fmax)**2))+0.0000001)))  #np.sqrt no puede lidiar con complejos, solo cmath.sqrt
-print(Sc_LambdaT[10000]) #En teoría sí funcionó lo de hacer complejo el linspace
+#print(Sc_LambdaT[10000]) #En teoría sí funcionó lo de hacer complejo el linspace
 
 #Sc_LambdaT(abs(f_lin)>=Fmax)=0;
 #Necesitamos la parte real y luego todo fuera de Fmax debe ser 0 
@@ -49,12 +59,12 @@ Sc_LambdaT = np.real(Sc_LambdaT)
 Sc_LambdaT[abs(f_lin)>=Fmax] = 0
 
 
-print(type(Sc_LambdaT[10000]))
+#print(type(Sc_LambdaT[10000]))
 
 #print(np.real(Sc_LambdaT[abs(f_lin)>=Fmax]))
 
-print(Sc_LambdaT[1])
-print(size(Sc_LambdaT))
+#print(Sc_LambdaT[1])
+#print(size(Sc_LambdaT))
 #plt.plot(f_lin,(Sc_LambdaT)) #Todo bien, EN ALGUN PUNTO HAY VALORES IMAG
 #plt.show()
 
@@ -78,16 +88,74 @@ hfw = Hf_FL*window
 
 hfw = hfw[hfw != 0]
 
-print(np.real(hfw))
+#print(np.real(hfw))
 
-hfw = hfw / np.linalg.norm(hfw)
+hfw = hfw / np.linalg.norm(hfw) #Normalizamos
 
 plt.plot((hfw)) #XD sigue habiendo valores imag
-plt.show()
+#plt.show()
+
+### Respuesta en Frec del Filtro FIR
+w, h = signal.freqz(hfw)
+
+#Sin freqz
+# hfw_z = np.pad(hfw, (0,size(hfw)),'constant',constant_values=(0,0))
+# freq = np.fft.fft(hfw_z)
+# ???
+
+fig = plt.figure()
+plt.title('Digital filter frequency response')
+# ax1 = fig.add_subplot(111)
+
+# plt.plot(freq)
+plt.plot((w*Fs)/2*np.pi, (20 * np.log10(abs(h))), 'b')
+# plt.ylabel('Amplitude [dB]', color='b')
+# plt.xlabel('Frequency [rad/sample]')
+#plt.show()
+
+# Aplicamos filtro FIR a ambas variables
+#Necesitamos condiciones iniciales para poder inyectarlas en la siguiente función
+
+#x_qf = signal.lfilter(hfw,1,x_q)
+#x_if = signal.lfilter(hfw,1,x_i)
+
+##############Jakes############
+
+#Necesitamos crear una matriz grande donde metamos todos los paths (Real+Imag) 
+x_iq = np.zeros((M,N))
+
+#Para cada valor de M vamos a filtrar un vector fila de tamaño N, luego sumar I + Q
+#Ese resultado lo metemos en x_iq 
+#Recordemos que lo importante es hacer toda la matriz NxM sin perder el estado 
+
+#Creamos estados iniciales para I y Q
+zi_i = signal.lfilter_zi(hfw,1)
+zi_q = signal.lfilter_zi(hfw,1)
+
+#Ademas de variables que sostengan el estado
+zf_i = 0
+zf_q = 0
+
+#Necesitamos un ciclo que dure 'M' donde se filtre, se sume y se ingrese en x_iq 
+#ademas de conservar estados
+
+# for i in range(M-1):
+#     xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[i,:],zi_i)
+#     xfilt_q, zf_q = signal.lfilter(hfw,1,x_q[i,:],zi_q)
+
+#     x_iq[i,:] = xfilt_i + xfilt_q
+
+#     zi_i = zf_i
+#     zi_q = zf_q
+
+xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[1,:],zi_i)
 
 # x_normal = x_q + x_i  #Se podría decir que estos son los factores de atenuación? (1.3.1 Matz)
+# x_normal_f = x_qf + x_if
 
 # #print(x_normal)
+
+############################################
 
 # #Generar Sincs
 # L = int(np.ceil(L))
@@ -104,7 +172,7 @@ plt.show()
 #     plt.plot(t,ML_Matrix[:,i])
 # #print((ML_Matrix))
 
-# producto = ML_Matrix@x_normal 
+# producto = ML_Matrix@x_normal #M-paths a L-taps
 # print(np.size(producto))
 # print(L)
 # #print(x_normal)

@@ -1,12 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.core.fromnumeric import prod, size
+from numpy.core.fromnumeric import size
 from numpy.core.function_base import linspace
 import cmath
 import sys
 np.set_printoptions(threshold=sys.maxsize)
 
-from numpy.random.mtrand import f
+#from numpy.random.mtrand import f
 from scipy import signal
 
 ######################
@@ -158,6 +158,11 @@ for i in range(M):
 # x_normal = x_q + x_i  #Se podría decir que estos son los factores de atenuación? (1.3.1 Matz)
 # x_normal_f = x_qf + x_if
 
+ftest, pxx = signal.periodogram(x_iq[1,:],Fs)
+plt.plot(f_lin,np.fft.fft(x_iq[1,:]))
+#plt.ylim([1e-7, 1e2])
+plt.show
+
 # #print(x_normal)
 
 ############################################
@@ -183,7 +188,7 @@ for k in range(M):
     taps[:,k] = ML_Matrix@(x_iq[k,:])
 
 # producto = ML_Matrix@x_normal #M-paths a L-taps
-print(taps)
+#print(taps)
 #print(L)
 # #print(x_normal)
 # print(producto)
@@ -191,4 +196,4 @@ print(taps)
 plt.plot(t,(taps))
 
 # #plt.plot(space,ML_Matrix[:,2],'r--',space,ML_Matrix[:,3],'b--')
-plt.show()
+#plt.show()

@@ -27,7 +27,7 @@ L=TauMax*Fs
 
 #Generar Matriz RNG de Paths
 #Distribución Normal con Media 0 y Varianza (Potencia) Unitaria
-mu = 5 #Media 
+mu = 0 #Media 
 var = potencia = 1 #Potencia 
 sigma = np.square(var) #Desviación Std
 #Estos dos representan un solo path, necesitamos M de estos, no estos de M tamaño
@@ -35,18 +35,18 @@ sigma = np.square(var) #Desviación Std
 x_q = np.zeros((M,N))
 x_i = np.zeros((M,N))
 
-for j in range(M):
-    x_q[j,:] = np.random.normal(mu,sigma,N) #Digamos que esta es la ponderación de las sincs que vas a generar
-    x_i[j,:] = np.random.normal(mu,sigma,N)*1j
+for k in range(M):
+    x_q[k,:] = np.random.normal(mu,sigma,N) #Digamos que esta es la ponderación de las sincs que vas a generar
+    x_i[k,:] = np.random.normal(mu,sigma,N)
 
-print(x_i)
+x_i = x_i*1j
 
 ##############################JAKES###########################
 #Introducimos el filtro FIR de distribución Jakes a cada uno de los coeficientes de x_q y x_i 
-Fs = 5e5
+Fs_J = 5e5
 N1=20001
-N=2001
-f_lin = (np.linspace(-Fs/2,Fs/2,N1)) #O bien define tu linspace como complejo (?)
+N_Hamming=2001
+f_lin = (np.linspace(-Fs_J/2,Fs_J/2,N1)) #O bien define tu linspace como complejo (?)
 Fmax = 1500
 #test = np.sqrt(1-((f_lin/Fmax)**2)) 
 #print(test)
@@ -78,7 +78,7 @@ Hf_FL = np.fft.fftshift(np.fft.ifft(np.fft.ifftshift(Hf)))
 #plt.plot(f_lin,(Hf_FL)) #Todo bien
 #plt.show()
 
-window = np.hamming(N)
+window = np.hamming(N_Hamming)
 window = np.pad(window, (9000,9000), 'constant', constant_values=(0,0))
 
 hfw = Hf_FL*window
@@ -92,23 +92,23 @@ hfw = hfw[hfw != 0]
 
 hfw = hfw / np.linalg.norm(hfw) #Normalizamos
 
-plt.plot((hfw)) #XD sigue habiendo valores imag
+#plt.plot((hfw)) #XD sigue habiendo valores imag
 #plt.show()
 
 ### Respuesta en Frec del Filtro FIR
-w, h = signal.freqz(hfw)
+#w, h = signal.freqz(hfw)
 
 #Sin freqz
 # hfw_z = np.pad(hfw, (0,size(hfw)),'constant',constant_values=(0,0))
 # freq = np.fft.fft(hfw_z)
 # ???
 
-fig = plt.figure()
-plt.title('Digital filter frequency response')
+#fig = plt.figure()
+#plt.title('Digital filter frequency response')
 # ax1 = fig.add_subplot(111)
 
 # plt.plot(freq)
-plt.plot((w*Fs)/2*np.pi, (20 * np.log10(abs(h))), 'b')
+#plt.plot((w*Fs)/2*np.pi, (20 * np.log10(abs(h))), 'b')
 # plt.ylabel('Amplitude [dB]', color='b')
 # plt.xlabel('Frequency [rad/sample]')
 #plt.show()
@@ -122,15 +122,16 @@ plt.plot((w*Fs)/2*np.pi, (20 * np.log10(abs(h))), 'b')
 ##############Jakes############
 
 #Necesitamos crear una matriz grande donde metamos todos los paths (Real+Imag) 
-x_iq = np.zeros((M,N))
+x_iq = np.zeros((M,N),dtype='complex_')
 
 #Para cada valor de M vamos a filtrar un vector fila de tamaño N, luego sumar I + Q
 #Ese resultado lo metemos en x_iq 
 #Recordemos que lo importante es hacer toda la matriz NxM sin perder el estado 
 
-#Creamos estados iniciales para I y Q
-zi_i = signal.lfilter_zi(hfw,1)
-zi_q = signal.lfilter_zi(hfw,1)
+#Creamos estados iniciales para I y Q, funcioens lfilter_zi tiran valores del tamaño de hfw menos 1 
+#es decir de 2000, son demasiados
+zi_i = np.zeros(size(hfw)-1)
+zi_q = np.zeros(size(hfw)-1)
 
 #Ademas de variables que sostengan el estado
 zf_i = 0
@@ -139,16 +140,20 @@ zf_q = 0
 #Necesitamos un ciclo que dure 'M' donde se filtre, se sume y se ingrese en x_iq 
 #ademas de conservar estados
 
-# for i in range(M-1):
-#     xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[i,:],zi_i)
-#     xfilt_q, zf_q = signal.lfilter(hfw,1,x_q[i,:],zi_q)
+#print(size(hfw))
 
-#     x_iq[i,:] = xfilt_i + xfilt_q
+for i in range(M):
+    xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[i,:],zi=zi_i)
+    xfilt_q, zf_q = signal.lfilter(hfw,1,x_q[i,:],zi=zi_q)
 
-#     zi_i = zf_i
-#     zi_q = zf_q
+    x_iq[:,i] = xfilt_i + xfilt_q #Estos son los path 
 
-xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[1,:],zi_i)
+    #print(x_iq[:,i])
+
+    zi_i = zf_i
+    zi_q = zf_q
+
+#xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[1,:],zi=zi_i) #Asi si entiende, olvidabamos poner zi=...
 
 # x_normal = x_q + x_i  #Se podría decir que estos son los factores de atenuación? (1.3.1 Matz)
 # x_normal_f = x_qf + x_if
@@ -157,28 +162,33 @@ xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[1,:],zi_i)
 
 ############################################
 
-# #Generar Sincs
-# L = int(np.ceil(L))
-# L = L-1
-# space = linspace(0,L-1,L) #Linspace usando L es eje en muestras, necesita estar en tiempo
-# t = space*Ts #Eje de Tiempo
-# #print(space)
-# #sinc_test = np.sinc(space-0.5) 
+#Generar Sincs
+L = int(np.ceil(L))
+L = L-1
+space = linspace(0,L-1,L) #Linspace usando L es eje en muestras, necesita estar en tiempo
+t = space*Ts #Eje de Tiempo
+#print(space)
+#sinc_test = np.sinc(space-0.5) 
 
-# #Necesitamos hacer "M" sincs retrasadas según la variable de delay, en este caso son 20 sincs
-# ML_Matrix = np.array(np.zeros(shape=(L,M)))
-# for i in range(M):
-#     ML_Matrix[:,i] = np.sqrt(pw_lineal[i])*np.sinc((t-(delay[i]))*Fs) #Restar a 't' en la sinc es desplazar, multiplicar por Fs es ponderar
-#     plt.plot(t,ML_Matrix[:,i])
-# #print((ML_Matrix))
+#Necesitamos hacer "M" sincs retrasadas según la variable de delay, en este caso son 20 sincs
+ML_Matrix = np.array(np.zeros(shape=(L,M)))
+for i in range(M):
+    ML_Matrix[:,i] = np.sqrt(pw_lineal[i])*np.sinc((t-(delay[i]))*Fs) #Restar a 't' en la sinc es desplazar, multiplicar por Fs es ponderar
+    plt.plot(t,ML_Matrix[:,i])
+#print((ML_Matrix))
+
+taps = np.zeros((L,M),dtype='complex_')
+
+for k in range(M):
+    taps[:,k] = ML_Matrix@(x_iq[k,:])
 
 # producto = ML_Matrix@x_normal #M-paths a L-taps
-# print(np.size(producto))
-# print(L)
+print(taps)
+#print(L)
 # #print(x_normal)
 # print(producto)
 
-# #plt.plot(t,(producto))
+plt.plot(t,(taps))
 
 # #plt.plot(space,ML_Matrix[:,2],'r--',space,ML_Matrix[:,3],'b--')
-# plt.show()
+plt.show()

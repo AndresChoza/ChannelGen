@@ -5,7 +5,7 @@ from numpy.core.function_base import linspace
 import cmath
 import sys
 np.set_printoptions(threshold=sys.maxsize)
-
+import csv
 #from numpy.random.mtrand import f
 from scipy import signal
 
@@ -22,7 +22,7 @@ TauMax = delay[-1] #Retardo Máximo
 #print(TauMax)
 
 M=np.size(delay)
-N=20
+N=2000
 L=TauMax*Fs
 
 #Generar Matriz RNG de Paths
@@ -123,6 +123,7 @@ hfw = hfw / np.linalg.norm(hfw) #Normalizamos
 
 #Necesitamos crear una matriz grande donde metamos todos los paths (Real+Imag) 
 x_iq = np.zeros((M,N),dtype='complex_')
+x_iq_2 = np.zeros((M,N),dtype='complex_')
 
 #Para cada valor de M vamos a filtrar un vector fila de tamaño N, luego sumar I + Q
 #Ese resultado lo metemos en x_iq 
@@ -146,22 +147,57 @@ for i in range(M):
     xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[i,:],zi=zi_i)
     xfilt_q, zf_q = signal.lfilter(hfw,1,x_q[i,:],zi=zi_q)
 
-    x_iq[:,i] = xfilt_i + xfilt_q #Estos son los path 
+    x_iq[i,:] = xfilt_i + xfilt_q #Estos son los path coloreados
+    #x_iq_2[i,:] = xfilt_q
 
     #print(x_iq[:,i])
 
     zi_i = zf_i
     zi_q = zf_q
 
+#######Densidad Espectral de Potencia - Verif Jakes#######
+# testeo = np.fft.fft(x_iq)
+# print(size(testeo))
+# plt.psd(testeo,512,Fs_J)
+# plt.show()
+
+#print(x_iq[1,:])
+file = open('C:/Users/Choza/Desktop/Capturas/psd.csv', 'w')
+writer = csv.writer(file)
+writer.writerow(x_iq[1,:])
+file.close
+##########################################################
+
+
+#######Gráfica de Distribución#######
+#count, bins, ignored = plt.hist(abs(x_iq), 15, density=True)
+
+#Distrib Normal
+# plt.plot(bins, 1/(sigma * np.sqrt(2 * np.pi)) *
+
+#                np.exp( - (bins - mu)**2 / (2 * sigma**2) ),
+
+#          linewidth=2, color='r')
+
+#Distrib Rayleigh
+#plt.plot(bins, bins/(sigma**2) *  
+
+#               np.exp( -bins**2 / (2 * sigma**2) ),
+
+#         linewidth=2, color='r')
+
+#plt.show()
+####################################
+
 #xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[1,:],zi=zi_i) #Asi si entiende, olvidabamos poner zi=...
 
 # x_normal = x_q + x_i  #Se podría decir que estos son los factores de atenuación? (1.3.1 Matz)
 # x_normal_f = x_qf + x_if
 
-ftest, pxx = signal.periodogram(x_iq[1,:],Fs)
-plt.plot(f_lin,np.fft.fft(x_iq[1,:]))
+#ftest, pxx = signal.periodogram(x_iq[1,:],Fs)
+#plt.plot(f_lin,(x_iq[1,:]))
 #plt.ylim([1e-7, 1e2])
-plt.show
+#plt.show
 
 # #print(x_normal)
 
@@ -185,7 +221,7 @@ for i in range(M):
 taps = np.zeros((L,M),dtype='complex_')
 
 for k in range(M):
-    taps[:,k] = ML_Matrix@(x_iq[k,:])
+    taps[:,k] = ML_Matrix@(x_iq[:,k]) # (?)
 
 # producto = ML_Matrix@x_normal #M-paths a L-taps
 #print(taps)

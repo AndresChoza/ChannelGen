@@ -6,7 +6,6 @@ import cmath
 import sys
 np.set_printoptions(threshold=sys.maxsize)
 import csv
-#from numpy.random.mtrand import f
 from scipy import signal
 
 ######################
@@ -48,23 +47,11 @@ N1=20001
 N_Hamming=2001
 f_lin = (np.linspace(-Fs_J/2,Fs_J/2,N1)) #O bien define tu linspace como complejo (?)
 Fmax = 1500
-#test = np.sqrt(1-((f_lin/Fmax)**2)) 
-#print(test)
 Sc_LambdaT = (1/((np.pi)*Fmax*(np.sqrt(1-((np.complex64(f_lin)/Fmax)**2))+0.0000001)))  #np.sqrt no puede lidiar con complejos, solo cmath.sqrt
-#print(Sc_LambdaT[10000]) #En teoría sí funcionó lo de hacer complejo el linspace
-
-#Sc_LambdaT(abs(f_lin)>=Fmax)=0;
 #Necesitamos la parte real y luego todo fuera de Fmax debe ser 0 
 Sc_LambdaT = np.real(Sc_LambdaT)
 Sc_LambdaT[abs(f_lin)>=Fmax] = 0
 
-
-#print(type(Sc_LambdaT[10000]))
-
-#print(np.real(Sc_LambdaT[abs(f_lin)>=Fmax]))
-
-#print(Sc_LambdaT[1])
-#print(size(Sc_LambdaT))
 #plt.plot(f_lin,(Sc_LambdaT)) #Todo bien, EN ALGUN PUNTO HAY VALORES IMAG
 #plt.show()
 
@@ -83,7 +70,7 @@ window = np.pad(window, (9000,9000), 'constant', constant_values=(0,0))
 
 hfw = Hf_FL*window
 
-#plt.plot(f_lin,(hfw)) #XD
+#plt.plot(f_lin,(hfw))
 #plt.show()
 
 hfw = hfw[hfw != 0]
@@ -123,7 +110,6 @@ hfw = hfw / np.linalg.norm(hfw) #Normalizamos
 
 #Necesitamos crear una matriz grande donde metamos todos los paths (Real+Imag) 
 x_iq = np.zeros((M,N),dtype='complex_')
-x_iq_2 = np.zeros((M,N),dtype='complex_')
 
 #Para cada valor de M vamos a filtrar un vector fila de tamaño N, luego sumar I + Q
 #Ese resultado lo metemos en x_iq 
@@ -141,45 +127,25 @@ zf_q = 0
 #Necesitamos un ciclo que dure 'M' donde se filtre, se sume y se ingrese en x_iq 
 #ademas de conservar estados
 
-#print(size(hfw))
-
 for i in range(M):
     xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[i,:],zi=zi_i)
     xfilt_q, zf_q = signal.lfilter(hfw,1,x_q[i,:],zi=zi_q)
 
     x_iq[i,:] = xfilt_i + xfilt_q #Estos son los path coloreados
-    #x_iq_2[i,:] = xfilt_q
-
-    #print(x_iq[:,i])
 
     zi_i = zf_i
     zi_q = zf_q
 
 #######Densidad Espectral de Potencia - Verif Jakes#######
-# testeo = np.fft.fft(x_iq)
-# print(size(testeo))
-# plt.psd(testeo,512,Fs_J)
-# plt.show()
-
-#print(x_iq[1,:])
-file = open('C:/Users/Choza/Desktop/Capturas/psd.csv', 'w')
-writer = csv.writer(file)
-writer.writerow(x_iq[1,:])
-file.close
+# file = open('C:/Users/Choza/Desktop/Capturas/psd.csv', 'w')
+# writer = csv.writer(file)
+# writer.writerow(x_iq[1,:])
+# file.close
 ##########################################################
-
 
 #######Gráfica de Distribución#######
 #count, bins, ignored = plt.hist(abs(x_iq), 15, density=True)
-
-#Distrib Normal
-# plt.plot(bins, 1/(sigma * np.sqrt(2 * np.pi)) *
-
-#                np.exp( - (bins - mu)**2 / (2 * sigma**2) ),
-
-#          linewidth=2, color='r')
-
-#Distrib Rayleigh
+##Distrib Rayleigh
 #plt.plot(bins, bins/(sigma**2) *  
 
 #               np.exp( -bins**2 / (2 * sigma**2) ),
@@ -189,27 +155,11 @@ file.close
 #plt.show()
 ####################################
 
-#xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[1,:],zi=zi_i) #Asi si entiende, olvidabamos poner zi=...
-
-# x_normal = x_q + x_i  #Se podría decir que estos son los factores de atenuación? (1.3.1 Matz)
-# x_normal_f = x_qf + x_if
-
-#ftest, pxx = signal.periodogram(x_iq[1,:],Fs)
-#plt.plot(f_lin,(x_iq[1,:]))
-#plt.ylim([1e-7, 1e2])
-#plt.show
-
-# #print(x_normal)
-
-############################################
-
 #Generar Sincs
 L = int(np.ceil(L))
 L = L-1
 space = linspace(0,L-1,L) #Linspace usando L es eje en muestras, necesita estar en tiempo
 t = space*Ts #Eje de Tiempo
-#print(space)
-#sinc_test = np.sinc(space-0.5) 
 
 #Necesitamos hacer "M" sincs retrasadas según la variable de delay, en este caso son 20 sincs
 ML_Matrix = np.array(np.zeros(shape=(L,M)))
@@ -223,11 +173,7 @@ taps = np.zeros((L,M),dtype='complex_')
 for k in range(M):
     taps[:,k] = ML_Matrix@(x_iq[:,k]) # (?)
 
-# producto = ML_Matrix@x_normal #M-paths a L-taps
-#print(taps)
-#print(L)
-# #print(x_normal)
-# print(producto)
+print(size(taps[:,1]))
 
 plt.plot(t,(taps))
 

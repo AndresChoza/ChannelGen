@@ -79,33 +79,6 @@ hfw = hfw[hfw != 0]
 
 hfw = hfw / np.linalg.norm(hfw) #Normalizamos
 
-#plt.plot((hfw)) #XD sigue habiendo valores imag
-#plt.show()
-
-### Respuesta en Frec del Filtro FIR
-#w, h = signal.freqz(hfw)
-
-#Sin freqz
-# hfw_z = np.pad(hfw, (0,size(hfw)),'constant',constant_values=(0,0))
-# freq = np.fft.fft(hfw_z)
-# ???
-
-#fig = plt.figure()
-#plt.title('Digital filter frequency response')
-# ax1 = fig.add_subplot(111)
-
-# plt.plot(freq)
-#plt.plot((w*Fs)/2*np.pi, (20 * np.log10(abs(h))), 'b')
-# plt.ylabel('Amplitude [dB]', color='b')
-# plt.xlabel('Frequency [rad/sample]')
-#plt.show()
-
-# Aplicamos filtro FIR a ambas variables
-#Necesitamos condiciones iniciales para poder inyectarlas en la siguiente función
-
-#x_qf = signal.lfilter(hfw,1,x_q)
-#x_if = signal.lfilter(hfw,1,x_i)
-
 ##############Jakes############
 
 #Necesitamos crear una matriz grande donde metamos todos los paths (Real+Imag) 
@@ -136,8 +109,10 @@ for i in range(M):
     zi_i = zf_i
     zi_q = zf_q
 
+print(size(x_iq[1,:]))
+
 #######Densidad Espectral de Potencia - Verif Jakes#######
-# file = open('C:/Users/Choza/Desktop/Capturas/psd.csv', 'w')
+# file = open('C:/Users/Choza/Desktop/Capturas/path.csv', 'w')
 # writer = csv.writer(file)
 # writer.writerow(x_iq[1,:])
 # file.close
@@ -166,16 +141,21 @@ ML_Matrix = np.array(np.zeros(shape=(L,M)))
 for i in range(M):
     ML_Matrix[:,i] = np.sqrt(pw_lineal[i])*np.sinc((t-(delay[i]))*Fs) #Restar a 't' en la sinc es desplazar, multiplicar por Fs es ponderar
     plt.plot(t,ML_Matrix[:,i])
-#print((ML_Matrix))
 
-taps = np.zeros((L,M),dtype='complex_')
+taps = np.zeros((L,N),dtype='complex_')
 
-for k in range(M):
-    taps[:,k] = ML_Matrix@(x_iq[:,k]) # (?)
+for k in range(N):
+    taps[:,k] = ML_Matrix@np.transpose(x_iq[:,k]) 
 
-print(size(taps[:,1]))
+print(np.shape(taps))
 
 plt.plot(t,(taps))
 
 # #plt.plot(space,ML_Matrix[:,2],'r--',space,ML_Matrix[:,3],'b--')
 #plt.show()
+
+# file = open('C:/Users/Choza/Desktop/Capturas/psd.csv', 'w')
+# writer = csv.writer(file)
+# for p in range(N):
+#     writer.writerow(taps[:,p])
+# file.close

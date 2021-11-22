@@ -18,7 +18,6 @@ pw_db = np.array([-5.7,-7.6,-10.1,-10.2,-10.2,-11.5,-13.4,-16.3,-16.9,-17.1,-17.
 pw_lineal = 10**(pw_db/10)
 
 TauMax = delay[-1] #Retardo Máximo
-#print(TauMax)
 
 M=np.size(delay)
 N=2000
@@ -31,12 +30,12 @@ var = potencia = 1 #Potencia
 sigma = np.square(var) #Desviación Std
 #Estos dos representan un solo path, necesitamos M de estos, no estos de M tamaño
 
-x_q = np.zeros((M,N))
-x_i = np.zeros((M,N))
+x_q = np.zeros((N,M))
+x_i = np.zeros((N,M))
 
 for k in range(M):
-    x_q[k,:] = np.random.normal(mu,sigma,N) #Digamos que esta es la ponderación de las sincs que vas a generar
-    x_i[k,:] = np.random.normal(mu,sigma,N)
+    x_q[:,k] = np.random.normal(mu,sigma,N) #Digamos que esta es la ponderación de las sincs que vas a generar
+    x_i[:,k] = np.random.normal(mu,sigma,N)
 
 x_i = x_i*1j
 
@@ -82,14 +81,13 @@ hfw = hfw / np.linalg.norm(hfw) #Normalizamos
 ##############Jakes############
 
 #Necesitamos crear una matriz grande donde metamos todos los paths (Real+Imag) 
-x_iq = np.zeros((M,N),dtype='complex_')
+x_iq = np.zeros((N,M),dtype='complex_')
 
 #Para cada valor de M vamos a filtrar un vector fila de tamaño N, luego sumar I + Q
 #Ese resultado lo metemos en x_iq 
 #Recordemos que lo importante es hacer toda la matriz NxM sin perder el estado 
 
-#Creamos estados iniciales para I y Q, funcioens lfilter_zi tiran valores del tamaño de hfw menos 1 
-#es decir de 2000, son demasiados
+#Creamos estados iniciales para I y Q, valores en 0.
 zi_i = np.zeros(size(hfw)-1)
 zi_q = np.zeros(size(hfw)-1)
 
@@ -101,21 +99,19 @@ zf_q = 0
 #ademas de conservar estados
 
 for i in range(M):
-    xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[i,:],zi=zi_i)
-    xfilt_q, zf_q = signal.lfilter(hfw,1,x_q[i,:],zi=zi_q)
+    xfilt_i, zf_i = signal.lfilter(hfw,1,x_i[:,i],zi=zi_i)
+    xfilt_q, zf_q = signal.lfilter(hfw,1,x_q[:,i],zi=zi_q)
 
-    x_iq[i,:] = xfilt_i + xfilt_q #Estos son los path coloreados
+    x_iq[:,i] = xfilt_i + xfilt_q #Estos son los path coloreados
 
     zi_i = zf_i
     zi_q = zf_q
 
-print(size(x_iq[1,:]))
-
 #######Densidad Espectral de Potencia - Verif Jakes#######
-# file = open('C:/Users/Choza/Desktop/Capturas/path.csv', 'w')
-# writer = csv.writer(file)
-# writer.writerow(x_iq[1,:])
-# file.close
+file = open('C:/Users/Choza/Desktop/Capturas/path.csv', 'w')
+writer = csv.writer(file)
+writer.writerow(x_iq[:,1])
+file.close
 ##########################################################
 
 #######Gráfica de Distribución#######
@@ -145,17 +141,15 @@ for i in range(M):
 taps = np.zeros((L,N),dtype='complex_')
 
 for k in range(N):
-    taps[:,k] = ML_Matrix@np.transpose(x_iq[:,k]) 
-
-print(np.shape(taps))
-
-plt.plot(t,(taps))
+    taps[:,k] = ML_Matrix@np.transpose(x_iq[k,:]) 
 
 # #plt.plot(space,ML_Matrix[:,2],'r--',space,ML_Matrix[:,3],'b--')
 #plt.show()
 
-# file = open('C:/Users/Choza/Desktop/Capturas/psd.csv', 'w')
-# writer = csv.writer(file)
-# for p in range(N):
-#     writer.writerow(taps[:,p])
-# file.close
+file = open('C:/Users/Choza/Desktop/Capturas/psd.csv', 'w')
+writer = csv.writer(file)
+for p in range(N):
+    writer.writerow(taps[:,p])
+file.close
+
+print(np.shape(taps))
